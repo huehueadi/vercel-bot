@@ -12,7 +12,8 @@ const app = express();
 
 const corsOptions = {
   origin: [
-    'http://127.0.0.1:5502',  // Allow 127.0.0.1:5502
+    'http://127.0.0.1:5502', 
+    'https://staging.d28eyjz01qa62a.amplifyapp.com',
     'http://localhost:3000',   // Allow localhost:3000
     'http://localhost:3001',   // Allow localhost:3001
   ],
