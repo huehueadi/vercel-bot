@@ -32,8 +32,6 @@
     "node-cache": "^5.1.2",
     "node-summarizer": "^1.0.7",
     "nodemon": "^3.1.9",
-    "puppeteer": "^24.1.1",
-    "puppeteer-core": "^10.4.0",
     "sanitize-html": "^2.14.0",
     "uuid": "^11.0.5"
   }
