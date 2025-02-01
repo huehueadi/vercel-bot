@@ -31,6 +31,7 @@
     "mongoose": "^8.9.5",
     "node-cache": "^5.1.2",
     "node-summarizer": "^1.0.7",
+    "puppeteer": "^19.0.0", 
     "nodemon": "^3.1.9",
     "sanitize-html": "^2.14.0",
     "uuid": "^11.0.5"
