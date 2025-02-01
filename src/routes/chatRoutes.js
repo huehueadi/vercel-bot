@@ -28,7 +28,7 @@ router.get('/sessions/:sessionId/chats', fetchChatsBySession);
 // router.post('/generate-content', generateContentController);
 
 
-router.get('/cheerio', authentication, cheerioscrapeWebsiteController);
+router.post('/cheerio', authentication, cheerioscrapeWebsiteController);
 
 
 
