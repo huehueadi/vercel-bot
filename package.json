@@ -5,10 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon app.js",
-    "install-chrome": "npm install chrome-aws-lambda",
-    "install-core": "npm install puppeteer-core",
-    "postinstall": "puppeteer-core install"
+    "start": "nodemon app.js"
   },
   "author": "",
   "license": "ISC",
@@ -22,7 +19,6 @@
     "bull": "^4.16.5",
     "cheerio": "^1.0.0",
     "cheero": "^0.0.1",
-    "chrome-aws-lambda": "^10.1.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -31,7 +27,6 @@
     "mongoose": "^8.9.5",
     "node-cache": "^5.1.2",
     "node-summarizer": "^1.0.7",
-    "puppeteer": "^19.0.0", 
     "nodemon": "^3.1.9",
     "sanitize-html": "^2.14.0",
     "uuid": "^11.0.5"
