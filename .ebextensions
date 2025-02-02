@@ -1,3 +1,36 @@
 commands:
-  install_dependencies:
-    command: "npm install"
+  01_install_dependencies:
+    command: "npm install"  # Installs your project dependencies using npm
+  
+  02_install_chromium_dependencies:
+    command: |
+      sudo yum install -y \
+        libatk1.0-0 \
+        libatk-bridge2.0-0 \
+        libcups2 \
+        libx11-xcb1 \
+        libxcomposite1 \
+        libxrandr2 \
+        libgbm1 \
+        libpango-1.0-0 \
+        libgdk-pixbuf2.0-0 \
+        libnss3 \
+        libxss1 \
+        libasound2 \
+        fonts-liberation \
+        libappindicator3-1 \
+        libnspr4 \
+        lsb-release \
+        xdg-utils
+  03_install_chromium:
+    command: |
+      sudo yum install -y chromium  # Install Chromium, which Puppeteer can use for scraping
+  04_check_chromium:
+    command: "chromium --version"  # Verify Chromium was successfully installed
+  05_npm_install_puppeteer:
+    command: "npm install puppeteer --save"  # Ensure Puppeteer is installed
+
+container_commands:
+  01_start_app:
+    command: "npm start"  # Command to start your application (e.g., if you're using express)
+    leader_only: true  # Ensure only one instance runs the app
