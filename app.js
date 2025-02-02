@@ -30,7 +30,9 @@ connectDB()
 app.use('/v1', router);
 // setInterval(cleanupInactiveSessions, 60 * 1000);
 export default app;
-
+app.get('/',(req, res)=>{
+  res.send("health")
+});
 // Start Server
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
