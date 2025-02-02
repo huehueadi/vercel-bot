@@ -8,6 +8,7 @@ import { handleChat } from '../controllers/chatController.js';
 import authentication from '../middleware/authenticationMiddleware.js';
 import { fetchChatsBySession, fetchSessionsByChatbotId } from '../controllers/SessionController.js';
 import { cheerioscrapeWebsiteController } from '../controllers/cherioController.js';
+import { puppeteerScrapeWebsiteController } from '../controllers/scrapingController.js';
 
 
 const router = express.Router();
@@ -24,7 +25,7 @@ router.get('/unanswered/:chatbot_id', getUnansweredQuestionsController)
 router.get('/sessions/:chatbotId', fetchSessionsByChatbotId); 
 router.get('/sessions/:sessionId/chats', fetchChatsBySession); 
 // router.post('/t1/chat', handleUserInput);
-// router.post('/t1/scrape', extractWebsiteContent );
+router.post('/t1/scrape',authentication, puppeteerScrapeWebsiteController );
 // router.post('/generate-content', generateContentController);
 
 
