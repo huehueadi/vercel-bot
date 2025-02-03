@@ -5,6 +5,7 @@ import connectDB from './src/config/db.js';
 import router from './src/routes/chatRoutes.js';
 // import { cleanupInactiveSessions } from './src/services/authSessionCleanup.js';
 import cookieParser from 'cookie-parser';
+import { v4 as uuidv4 } from 'uuid'; // Import UUID for session IDs
 
 const app = express();
 
@@ -27,13 +28,16 @@ app.use(cookieParser());
 // Database Connection
 connectDB()
 // Routes
-app.use('/v1', router);
-// setInterval(cleanupInactiveSessions, 60 * 1000);
-export default app;
+app.use('/v1', router);    // Prefix user routes with /v1/user
+
 app.get('/',(req, res)=>{
   res.send("health")
 });
-// Start Server
+
+
+
+
+
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

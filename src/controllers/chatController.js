@@ -163,16 +163,14 @@
 //     throw new Error('Failed to fetch data from S3: ' + error.message);
 //   }
 // };
-
 import AWS from 'aws-sdk';
 import axios from 'axios';
 import Chat from '../models/chatModel.js';
 import ScrapedData from '../models/scrappedDataModel.js';
 import { generateResponse } from '../services/aiService.js';
-import { v4 as uuidv4 } from 'uuid'; // Import UUID for session IDs
+import { v4 as uuidv4 } from 'uuid';
 import dotenv from 'dotenv';
 
-// Load environment variables from the .env file
 dotenv.config();
 
 const s3 = new AWS.S3({
@@ -181,13 +179,12 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
 });
 
-const SESSION_EXPIRY_TIME = 5 * 60 * 1000; // 5 minutes in milliseconds
+const SESSION_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 1 day in milliseconds (24 hours)
 
 export const handleChat = async (req, res) => {
   const { message } = req.body;
   const { userid } = req.params;
   let sessionId = req.cookies?.sessionId; // Retrieve session ID from cookies
-  let lastActivity = req.cookies?.lastActivity; // Retrieve last activity timestamp from cookies
 
   if (!message) {
     return res.status(400).json({ error: 'Message is required' });
@@ -198,39 +195,13 @@ export const handleChat = async (req, res) => {
   }
 
   try {
-    const currentTimestamp = Date.now(); // Current timestamp for session expiry check
-
-    // Check if session is expired (no activity for 5 minutes)
-    if (sessionId && lastActivity && currentTimestamp - lastActivity > SESSION_EXPIRY_TIME) {
-      console.log("Session expired due to inactivity");
-      sessionId = null; // Expire session
-      res.clearCookie('sessionId');
-      res.clearCookie('lastActivity');
-    }
-
-    // Generate a new session if it doesn't exist
+    // If no sessionId, create one (this only happens on the first request)
     if (!sessionId) {
-      sessionId = uuidv4();
+      sessionId = uuidv4(); // Generate a new session ID
       res.cookie('sessionId', sessionId, {
-        httpOnly: true,
-        secure: true, // Set to true if using HTTPS
-        sameSite: 'None',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7-day expiry
+        maxAge: SESSION_EXPIRY_TIME, // Cookie will expire in 1 day (24 hours)
       });
-      res.cookie('lastActivity', currentTimestamp, {
-        httpOnly: true,
-        secure: true, // Set to true if using HTTPS
-        sameSite: 'None',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7-day expiry
-      });
-    } else {
-      // Update the last activity timestamp on each new message (renew session)
-      res.cookie('lastActivity', currentTimestamp, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'None',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7-day expiry
-      });
+      console.log("New session created:", sessionId);
     }
 
     // Fetch the scraped data record from the database
@@ -252,12 +223,12 @@ export const handleChat = async (req, res) => {
     // Generate a response using the AI service
     const botResponse = await generateResponse(formattedPrompt);
 
-    // Log the chat for future reference
+    // Log the chat for future reference (save session ID with chat)
     const chatLog = new Chat({
       user_message: message,
       bot_response: botResponse,
       chatbot_id: scrapedDataRecord.userid,
-      session_id: sessionId, 
+      session_id: sessionId, // Store session ID in the chat log
     });
     await chatLog.save();
     console.log(chatLog);
@@ -276,11 +247,11 @@ const formatScrapedDataForAI = (scrapedData, userQuery) => {
     ? scrapedData.join("\n\n") 
     : scrapedData; 
 
-  console.log("Formatted Text for AI:", formattedText);
 
   return `Here is website data:\n\n${formattedText}\n\nUser's question answer in short: ${userQuery}\nResponse:`;
 };
 
+// Fetch scraped data from S3
 const fetchDataFromS3 = async (s3Url) => {
   try {
     const response = await axios.get(s3Url);
@@ -291,17 +262,10 @@ const fetchDataFromS3 = async (s3Url) => {
 
     const scrapedData = response.data;
 
-    // Log the structure and type of the data for debugging
-    console.log("Full S3 Response:", response);
-    console.log("Fetched S3 Data:", scrapedData);
-    console.log("Type of Fetched Data:", typeof scrapedData);  // Log the type
-    console.log("Is Array?", Array.isArray(scrapedData)); // Check if it's an array
-
-    // If it's an array, process as usual
     if (Array.isArray(scrapedData)) {
       let filteredData = [];
 
-      scrapedData.forEach((item, index) => {
+      scrapedData.forEach((item) => {
         if (item.paragraphs && Array.isArray(item.paragraphs)) {
           const validParagraphs = item.paragraphs.filter(paragraph => paragraph.trim() !== "" && paragraph !== "Test Mode");
           filteredData.push(...validParagraphs);
@@ -320,7 +284,7 @@ const fetchDataFromS3 = async (s3Url) => {
       }
     } else if (typeof scrapedData === 'object') {
       console.log("S3 Data is an object. Returning JSON stringified data.");
-      return JSON.stringify(scrapedData); // Handle the case where data is an object
+      return JSON.stringify(scrapedData); 
     } else {
       throw new Error('S3 data format is not recognized.');
     }

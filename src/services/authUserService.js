@@ -1,79 +1,59 @@
 import bcrypt from "bcrypt";
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
-import chatbotModel from "../models/userModel.js";
+import ChatbotModel from "../models/userModel.js";
 
-
-export const chatbotRegister = async (username, password, userid) => {
+export const chatbotRegister = async (username, password, role = "user") => {
   try {
-    const existingChatbot = await chatbotModel.findOne({ userid });
-    if (existingChatbot) {
-      throw new Error("User ID already exists, please choose a different one.");
-    }
+    // Check if username already exists
+    const existingUser = await ChatbotModel.findOne({ username });
+    if (existingUser) throw new Error("Username already exists, choose another.");
 
-    const existingUsername = await chatbotModel.findOne({ username });
-    if (existingUsername) {
-      throw new Error("Username already exists, please choose a different one.");
-    }
+    // Generate unique user ID
     const generatedUserId = uuidv4();
 
-    const hashedPassword = await bcrypt.hash(password, 10); 
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newChatbot = new chatbotModel({
+    // Create new user
+    const newUser = new ChatbotModel({
       username,
       password: hashedPassword,
-      userid: generatedUserId
+      userid: generatedUserId,
+      role,  // Set role (default: "user")
     });
 
-    await newChatbot.save();
+    await newUser.save();
 
-    return {
-      success: true,
-      message: "Chatbot registered successfully."
-    };
+    return { success: true, message: "User registered successfully." };
   } catch (error) {
-    return {
-      success: false,
-      message: error.message
-    };
+    return { success: false, message: error.message };
   }
 };
 
 
+
 export const chatbotLoginService = async (username, password) => {
-    try {
-     
-      const chatbot = await chatbotModel.findOne({ username });
-  
-      if (!chatbot) {
-        throw new Error("Username not found.");
-      }
-  
-      const isPasswordValid = await bcrypt.compare(password, chatbot.password);
-      
-      if (!isPasswordValid) {
-        throw new Error("Incorrect password.");
-      }
-  
-      const payload = {
-        userId: chatbot.userid,  // Unique userId
-        username: chatbot.username,  // Username
-        createdAt: chatbot.createdAt,  // Optional: Account creation timestamp
-      };
-  
-      const token = jwt.sign(payload, "key", { expiresIn: "1h" });  // Token expires in 1 hour
-  
-      return {
-        success: true,
-        message: "Login successful.",
-        token,
-        payload
-      };
-  
-    } catch (error) {
-      return {
-        success: false,
-        message: error.message || "An error occurred during login."
-      };
-    }
-  };
+  try {
+    const user = await ChatbotModel.findOne({ username });
+
+    if (!user) throw new Error("Username not found.");
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) throw new Error("Incorrect password.");
+
+    // Token payload now includes role
+    const payload = {
+      userId: user.userid,
+      username: user.username,
+      role: user.role,  // Add role
+    };
+
+    // Generate JWT
+    const token = jwt.sign(payload, "key", { expiresIn: "1h" });
+
+    return { success: true, message: "Login successful.", token, payload };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
