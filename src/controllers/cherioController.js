@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';  // For generating UUIDs
 import ScrapedData from '../models/scrappedDataModel.js';
 
 const MAX_CONCURRENCY = 8;  // Number of concurrent requests
-const TIMEOUT = 5000;  // Timeout for requests in ms
+const TIMEOUT = 15000;  // Timeout for requests in ms
 const visitedUrls = new Set();  // Set to track visited URLs
 let totalScrapedPages = 0;  // To keep track of scraped pages
 const FILE_SIZE_LIMIT = 2 * 1024 * 1024;  // 2MB size limit for in-memory response (2MB in bytes)

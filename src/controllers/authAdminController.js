@@ -243,3 +243,45 @@ export const getStats = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+
+export const adminMostAskedQuestionsController = async (req, res) => {
+    try {
+        const questions = await Chat.aggregate([
+            {
+                $project: {
+                    user_message: {
+                        $trim: { input: { $toLower: "$user_message" } } 
+                    }
+                }
+            },
+            {
+                $group: {
+                    _id: "$user_message", 
+                    count: { $sum: 1 },    
+                },
+            },
+            { $sort: { count: -1 } },   // Sort by the most frequently asked question
+            { $limit: 6 },             // Limit to top 10 most asked questions across all chatbots
+        ]);
+
+        // Check if questions were found
+        if (questions.length === 0) {
+            return res.status(404).json({ message: "No questions found." });
+        }
+
+        // Return the top 10 most asked questions with their counts
+        res.status(200).json({
+            message: "Most asked questions fetched successfully.",
+            data: questions
+        });
+
+    } catch (error) {
+        console.error("Error while fetching most asked questions:", error.message);
+        // Send a 500 error response if something went wrong
+        res.status(500).json({
+            message: "Error fetching most asked questions.",
+            error: error.message
+        });
+    }
+};

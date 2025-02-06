@@ -163,6 +163,71 @@
 //     throw new Error('Failed to fetch data from S3: ' + error.message);
 //   }
 // };
+
+// export const handleChat = async (req, res) => {
+//   const { message } = req.body;
+//   const { userid } = req.params;
+//   let session_id = req.cookies?.session_id; 
+//   console.log(`session recievd ;;;; ${session_id}`);
+
+//   if (!message) {
+//     return res.status(400).json({ error: 'Message is required' });
+//   }
+
+//   if (!userid) {
+//     return res.status(400).json({ error: 'UUID for the scraped data is required' });
+//   }
+
+//   try {
+//     // If no sessionId, create one (this only happens on the first request)
+//     if (!session_id) {
+//       session_id = uuidv4(); // Generate a new session ID
+//       res.cookie('session_id', session_id, {
+//         httpOnly: true,  // Prevent client-side access to the cookie
+//         secure: false,  // Set to true only in production (when using HTTPS)
+//         sameSite: 'None', // Necessary for cross-origin requests
+//         maxAge: SESSION_EXPIRY_TIME,  // Cookie expiry time (1 day)
+//       });
+//       console.log("New session created:", session_id);
+//     }
+    
+
+//     // Fetch the scraped data record from the database
+//     const scrapedDataRecord = await ScrapedData.findOne({ userid });
+//     if (!scrapedDataRecord) {
+//       return res.status(404).json({ error: 'Scraped data not found for the provided UUID' });
+//     }
+
+//     // Fetch the actual scraped data from S3
+//     const s3Data = await fetchDataFromS3(scrapedDataRecord.s3Url);
+
+//     if (!s3Data || s3Data.length === 0) {
+//       return res.status(400).json({ error: 'No valid scraped data found' });
+//     }
+
+//     // Format the scraped data and user message into a prompt
+//     const formattedPrompt = formatScrapedDataForAI(s3Data, message);
+
+//     // Generate a response using the AI service
+//     const botResponse = await generateResponse(formattedPrompt);
+
+//     // Log the chat for future reference (save session ID with chat)
+//     const chatLog = new Chat({
+//       user_message: message,
+//       bot_response: botResponse,
+//       chatbot_id: scrapedDataRecord.userid,
+//       session_id: session_id, // Store session ID in the chat log
+//     });
+//     await chatLog.save();
+
+//     // Send the response back to the user
+//     res.json({ response: botResponse });
+//   } catch (err) {
+//     console.error('Error handling chat:', err.message);
+//     res.status(500).json({ error: 'Internal server error' });
+//   }
+// };
+
 import AWS from 'aws-sdk';
 import axios from 'axios';
 import Chat from '../models/chatModel.js';
@@ -179,12 +244,19 @@ const s3 = new AWS.S3({
   region: process.env.AWS_REGION,
 });
 
-const SESSION_EXPIRY_TIME = 24 * 60 * 60 * 1000; // 1 day in milliseconds (24 hours)
+const SESSION_EXPIRY_TIME = 24 * 60 * 60 * 1000; 
+
+const generateSessionId = () => {
+  const uniquePart = uuidv4().split('-')[0]; // Using only the first part of the UUID for brevity
+  return `session-${uniquePart}`;
+};
 
 export const handleChat = async (req, res) => {
   const { message } = req.body;
   const { userid } = req.params;
-  let sessionId = req.cookies?.sessionId; // Retrieve session ID from cookies
+
+  // Retrieve session ID from the request headers (sent from localStorage on the frontend)
+  let session_id = req.headers['session-id']; 
 
   if (!message) {
     return res.status(400).json({ error: 'Message is required' });
@@ -196,12 +268,8 @@ export const handleChat = async (req, res) => {
 
   try {
     // If no sessionId, create one (this only happens on the first request)
-    if (!sessionId) {
-      sessionId = uuidv4(); // Generate a new session ID
-      res.cookie('sessionId', sessionId, {
-        maxAge: SESSION_EXPIRY_TIME, // Cookie will expire in 1 day (24 hours)
-      });
-      console.log("New session created:", sessionId);
+    if (!session_id) {
+      session_id = generateSessionId(); // Generate a new session ID
     }
 
     // Fetch the scraped data record from the database
@@ -228,13 +296,17 @@ export const handleChat = async (req, res) => {
       user_message: message,
       bot_response: botResponse,
       chatbot_id: scrapedDataRecord.userid,
-      session_id: sessionId, // Store session ID in the chat log
+      session_id: session_id, // Store session ID in the chat log
     });
     await chatLog.save();
-    console.log(chatLog);
 
     // Send the response back to the user
-    res.json({ response: botResponse });
+    res.json({ 
+      response: botResponse,
+      session_id: session_id,  // Send the session ID back to the frontend
+
+    
+    });
   } catch (err) {
     console.error('Error handling chat:', err.message);
     res.status(500).json({ error: 'Internal server error' });
@@ -248,7 +320,7 @@ const formatScrapedDataForAI = (scrapedData, userQuery) => {
     : scrapedData; 
 
 
-  return `Here is website data:\n\n${formattedText}\n\nUser's question answer in short: ${userQuery}\nResponse:`;
+  return `Here is website data say sorry first if you cant find answer:\n\n${formattedText}\n\nUser's question answer in short: ${userQuery}\nResponse:`;
 };
 
 // Fetch scraped data from S3
@@ -283,7 +355,6 @@ const fetchDataFromS3 = async (s3Url) => {
         throw new Error('No valid paragraphs or links found in the S3 data.');
       }
     } else if (typeof scrapedData === 'object') {
-      console.log("S3 Data is an object. Returning JSON stringified data.");
       return JSON.stringify(scrapedData); 
     } else {
       throw new Error('S3 data format is not recognized.');

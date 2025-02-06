@@ -5,7 +5,6 @@ import connectDB from './src/config/db.js';
 import router from './src/routes/chatRoutes.js';
 // import { cleanupInactiveSessions } from './src/services/authSessionCleanup.js';
 import cookieParser from 'cookie-parser';
-import { v4 as uuidv4 } from 'uuid'; // Import UUID for session IDs
 
 const app = express();
 

@@ -22,3 +22,4 @@ export const mostAskedQuestionsService = async (chatbotId) => {
         throw new Error("Error while fetching most asked questions");
     }
 };
+

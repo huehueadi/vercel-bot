@@ -5,7 +5,6 @@ const GEMINI_API_KEY = 'AIzaSyCR8N0h-azK7GlfoMimJUg4vNlw0yA2juU'; // New API Key
 
 export const generateResponse = async (message) => {
   try {
-    console.log("Sending request to Gemini API with message:", message);
 
     const response = await axios.post(
       GEMINI_API_URL,
@@ -15,7 +14,6 @@ export const generateResponse = async (message) => {
     
     if (response.status === 200 && response.data.candidates && Array.isArray(response.data.candidates) && response.data.candidates.length > 0) {
       const botText = response.data.candidates[0].content.parts[0].text;
-      console.log("Bot Response:", botText);
       return botText; 
     } else {
       console.error("Invalid response from Gemini API:", response.data);

@@ -346,34 +346,40 @@
       chatMessages.scrollTop = chatMessages.scrollHeight;
   
       try {
-        // Send message to backend API
-        const response = await fetch('http://test-bot-env.eba-2xmse4ng.ap-south-1.elasticbeanstalk.com/v1/chat/72fe8742-d3b7-4797-9730-215627a9cd6f', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            
-          },
-          body: JSON.stringify({
-            message: message,
-          }),
-          credentials: 'include',
-        });
-  
-        if (response.ok) {
-          const data = await response.json();
-          // Remove loading indicator
-          loadingIndicator.remove();
-  
-          // Add bot response
-          addMessage(data.response, true);
-        } else {
-          throw new Error('Failed to fetch response from server');
-        }
-      } catch (error) {
-        // Handle errors
-        loadingIndicator.remove();
-        addMessage("Sorry, something went wrong. Please try again later.", true);
-      }
+  // Log the session ID from cookies (if available)
+  const sessionId = document.cookie.split('; ').find(row => row.startsWith('session_id='));
+  const sessionIdValue = sessionId ? sessionId.split('=')[1] : 'No session ID';
+
+  console.log(`Sending request with session_id: ${sessionIdValue}`);  // Log the session ID
+
+  // Send message to backend API
+  const response = await fetch('http://test-bot-env.eba-2xmse4ng.ap-south-1.elasticbeanstalk.com/v1/chat/72fe8742-d3b7-4797-9730-215627a9cd6f', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      message: message,
+    }),
+    credentials: 'include', // Ensures cookies are included
+  });
+
+  if (response.ok) {
+    const data = await response.json();
+    // Remove loading indicator
+    loadingIndicator.remove();
+
+    // Add bot response
+    addMessage(data.response, true);
+  } else {
+    throw new Error('Failed to fetch response from server');
+  }
+} catch (error) {
+  // Handle errors
+  loadingIndicator.remove();
+  addMessage("Sorry, something went wrong. Please try again later.", true);
+}
+
     });
   
     // Create loading indicator for bot response
@@ -401,41 +407,65 @@
     }
   
     // Function to add messages to the chat
-    function addMessage(content, isBot) {
-      const messageDiv = document.createElement('div');
-      messageDiv.className = isBot ? 'message bot' : 'message user';
-  
-      const avatar = document.createElement('div');
-      avatar.className = 'avatar';
-      avatar.innerHTML = isBot ? `
-        <svg viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10"></circle>
-          <path d="M12 16v-4"></path>
-          <path d="M12 8h.01"></path>
-        </svg>
-      ` : `
-        <svg viewBox="0 0 24 24">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
-        </svg>
-      `;
-  
-      const messageContent = document.createElement('div');
-      messageContent.className = 'message-content';
-      messageContent.textContent = content;
-  
-      const timestamp = document.createElement('div');
-      timestamp.className = 'timestamp';
-      timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      messageContent.appendChild(timestamp);
-  
-      messageDiv.appendChild(avatar);
-      messageDiv.appendChild(messageContent);
-      chatMessages.appendChild(messageDiv);
-  
-      // Scroll to bottom
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
+    function formatMessage(content) {
+  // Replace new lines with <br> for better readability
+  content = content.replace(/\n/g, "<br>");
+
+  // Bold and Italics: **bold** -> <b>bold</b>, *italic* -> <i>italic</i>
+  content = content.replace(/\*\*(.*?)\*\*/g, "<b>$1</b>");
+  content = content.replace(/\*(.*?)\*/g, "<i>$1</i>");
+
+  // Convert links: [text](https://example.com) -> <a href="https://example.com">text</a>
+  content = content.replace(/\[(.*?)\]\((https?:\/\/.*?)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+  // Convert inline code: `code` -> <code>code</code>
+  content = content.replace(/`(.*?)`/g, '<code>$1</code>');
+
+  // Convert lists: "- item" -> <ul><li>item</li></ul>
+  content = content.replace(/- (.*?)(\n|$)/g, '<li>$1</li>');
+  content = content.replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
+
+  return content;
+}
+
+// Modify the addMessage function to use formatMessage
+function addMessage(content, isBot) {
+  const messageDiv = document.createElement('div');
+  messageDiv.className = isBot ? 'message bot' : 'message user';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.innerHTML = isBot ? `
+    <svg viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M12 16v-4"></path>
+      <path d="M12 8h.01"></path>
+    </svg>
+  ` : `
+    <svg viewBox="0 0 24 24">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+      <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+  `;
+
+  const messageContent = document.createElement('div');
+  messageContent.className = 'message-content';
+  messageContent.innerHTML = formatMessage(content); // Apply formatting
+
+  const timestamp = document.createElement('div');
+  timestamp.className = 'timestamp';
+  timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  messageContent.appendChild(timestamp);
+
+  messageDiv.appendChild(avatar);
+  messageDiv.appendChild(messageContent);
+  chatMessages.appendChild(messageDiv);
+
+  // Scroll to bottom
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+    
   </script>
 </body>
 </html>
