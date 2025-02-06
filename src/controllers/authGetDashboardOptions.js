@@ -1,6 +1,5 @@
-// This route can be used to fetch different options for user and admin
 export const getDashboardOptions = (req, res) => {
-  const { role } = req.user; // This comes from JWT payload
+  const { role } = req.user; 
 
   if (role === "admin") {
     return res.status(200).json({

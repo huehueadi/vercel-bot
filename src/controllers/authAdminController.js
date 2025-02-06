@@ -1,10 +1,9 @@
 import Chat from "../models/chatModel.js";
 import ChatbotModel from "../models/userModel.js";
 
-// Controller to fetch all users (based on username)
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await ChatbotModel.find({ role: "user" }); // Fetch users only
+    const users = await ChatbotModel.find({ role: "user" }); 
     return res.status(200).json({
       success: true,
       message: "Users fetched successfully.",
@@ -19,7 +18,6 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// Controller to fetch a specific user by username
 export const getUserById = async (req, res) => {
   const { username } = req.params;
   try {
@@ -44,10 +42,9 @@ export const getUserById = async (req, res) => {
   }
 };
 
-// Controller to fetch all chatbots (based on userid)
 export const getAllChatbots = async (req, res) => {
   try {
-    const chatbots = await ChatbotModel.find({ role: "user" }); // Fetch chatbots associated with users
+    const chatbots = await ChatbotModel.find({ role: "user" }); 
     return res.status(200).json({
       success: true,
       message: "Chatbots fetched successfully.",
@@ -62,7 +59,6 @@ export const getAllChatbots = async (req, res) => {
   }
 };
 
-// Controller to fetch a specific chatbot by userid
 export const getChatbotById = async (req, res) => {
   const { userid } = req.params;
   try {
@@ -87,7 +83,6 @@ export const getChatbotById = async (req, res) => {
   }
 };
 
-// Controller to delete a user
 export const deleteUser = async (req, res) => {
   const { username } = req.params;
   try {
@@ -111,7 +106,6 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-// Controller to delete a chatbot
 export const deleteChatbot = async (req, res) => {
   const { userid } = req.params;
   try {
@@ -135,10 +129,9 @@ export const deleteChatbot = async (req, res) => {
   }
 };
 
-// Controller to update user role (admin or user)
 export const updateUser = async (req, res) => {
   const { username } = req.params;
-  const { role } = req.body;  // Assume role is passed in the request body
+  const { role } = req.body;  
 
   if (!role || !["user", "admin"].includes(role)) {
     return res.status(400).json({
@@ -151,7 +144,7 @@ export const updateUser = async (req, res) => {
     const user = await ChatbotModel.findOneAndUpdate(
       { username, role: "user" },
       { role },
-      { new: true }  // Return updated user
+      { new: true }  
     );
     if (!user) {
       return res.status(404).json({
@@ -173,15 +166,14 @@ export const updateUser = async (req, res) => {
   }
 };
 
-// Controller to update chatbot details
 export const updateChatbot = async (req, res) => {
   const { userid } = req.params;
-  const { username, password } = req.body;  // Example: username or password for update
+  const { username, password } = req.body;  
 
   try {
     const chatbot = await ChatbotModel.findOneAndUpdate(
       { userid, role: "user" },
-      { username, password },  // Update fields
+      { username, password },  
       { new: true }
     );
     if (!chatbot) {
@@ -208,7 +200,6 @@ export const updateChatbot = async (req, res) => {
 
 export const getStats = async (req, res) => {
   try {
-    // Calculate total messages (total number of chat entries)
     const totalMessages = await Chat.aggregate([
       {
         $project: {
@@ -225,14 +216,11 @@ export const getStats = async (req, res) => {
 
     const messageCount = totalMessages.length ? totalMessages[0].totalMessages : 0;
 
-    // Calculate total sessions (unique session_ids)
     const totalSessions = await Chat.distinct('session_id').countDocuments();
 
-    // Calculate total unique chatbots (unique user_ids or chatbot_ids)
     const uniqueChatbots = await ChatbotModel.distinct('userid');
     const totalChatbots = uniqueChatbots.length;
 
-    // Return the stats as JSON response
     res.status(200).json({
       totalMessages: messageCount,
       totalSessions,
@@ -261,16 +249,14 @@ export const adminMostAskedQuestionsController = async (req, res) => {
                     count: { $sum: 1 },    
                 },
             },
-            { $sort: { count: -1 } },   // Sort by the most frequently asked question
-            { $limit: 6 },             // Limit to top 10 most asked questions across all chatbots
+            { $sort: { count: -1 } },   
+            { $limit: 6 },             
         ]);
 
-        // Check if questions were found
         if (questions.length === 0) {
             return res.status(404).json({ message: "No questions found." });
         }
 
-        // Return the top 10 most asked questions with their counts
         res.status(200).json({
             message: "Most asked questions fetched successfully.",
             data: questions
@@ -278,7 +264,6 @@ export const adminMostAskedQuestionsController = async (req, res) => {
 
     } catch (error) {
         console.error("Error while fetching most asked questions:", error.message);
-        // Send a 500 error response if something went wrong
         res.status(500).json({
             message: "Error fetching most asked questions.",
             error: error.message

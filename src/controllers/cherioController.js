@@ -1,46 +1,41 @@
 import { URL } from 'url';
-import { parse } from 'url';  // To extract the domain from the base URL
-import * as cheerio from 'cheerio';  // Cheerio for scraping
+import { parse } from 'url';  
+import * as cheerio from 'cheerio';  
 import axios from 'axios';
-import AWS from 'aws-sdk';  // AWS SDK for S3
-import { v4 as uuidv4 } from 'uuid';  // For generating UUIDs
+import AWS from 'aws-sdk';  
+import { v4 as uuidv4 } from 'uuid';  
 import ScrapedData from '../models/scrappedDataModel.js';
 
-const MAX_CONCURRENCY = 8;  // Number of concurrent requests
-const TIMEOUT = 15000;  // Timeout for requests in ms
-const visitedUrls = new Set();  // Set to track visited URLs
-let totalScrapedPages = 0;  // To keep track of scraped pages
-const FILE_SIZE_LIMIT = 2 * 1024 * 1024;  // 2MB size limit for in-memory response (2MB in bytes)
+const MAX_CONCURRENCY = 8;  
+const TIMEOUT = 15000;  
+const visitedUrls = new Set();  
+let totalScrapedPages = 0;  
+const FILE_SIZE_LIMIT = 2 * 1024 * 1024;  
 
 const BUCKET_NAME = process.env.AWS_BUCKET_NAME;
 
-// Initialize S3 client
 const s3 = new AWS.S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   region: process.env.AWS_REGION,
 });
 
-// Delay function to add a timeout between each batch of concurrent requests
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Function to extract the domain from a given URL
 const extractDomain = (url) => {
   const parsedUrl = parse(url);
-  return `${parsedUrl.protocol}//${parsedUrl.hostname}`;  // Return domain like 'https://startinup.up.gov.in'
+  return `${parsedUrl.protocol}//${parsedUrl.hostname}`;  
 };
 
-// Function to scrape a page's body content (paragraphs and links)
 const scrapeBodyContent = async (url, domain) => {
   try {
-    console.log(`Scraping page: ${url}`);  // Log the URL being scraped
+    console.log(`Scraping page: ${url}`);  
     const { data } = await axios.get(url, { timeout: TIMEOUT });
     const $ = cheerio.load(data);
 
-    // Extract paragraphs and links
     const paragraphs = new Set();
     $('p').each((index, element) => {
-      paragraphs.add($(element).text().trim());  // Add paragraphs to the set for deduplication
+      paragraphs.add($(element).text().trim());  
     });
 
     const links = new Set();
@@ -48,45 +43,41 @@ const scrapeBodyContent = async (url, domain) => {
       const href = $(element).attr('href');
       if (href) {
         const absoluteUrl = new URL(href, url).href;
-        links.add(absoluteUrl);  // Add links to the set for deduplication
+        links.add(absoluteUrl);  
       }
     });
 
     return { url, paragraphs: Array.from(paragraphs), links: Array.from(links) };
   } catch (error) {
     console.error(`Error scraping ${url}: ${error.message}`);
-    return null;  // Return null if scraping fails
+    return null; 
   }
 };
 
-// Function to crawl the website and collect internal links
 const crawlWebsite = async (baseUrl, domain) => {
   try {
     const { data } = await axios.get(baseUrl, { timeout: TIMEOUT });
     const $ = cheerio.load(data);
     const links = new Set();
 
-    // Find all internal links that start with the allowed domain
     $('a').each((index, element) => {
       const href = $(element).attr('href');
       if (href) {
         const absoluteUrl = new URL(href, baseUrl).href;
-        // Only add links from the same domain
         if (absoluteUrl.startsWith(domain) && !visitedUrls.has(absoluteUrl)) {
-          links.add(absoluteUrl);  // Add to the set of links to visit
-          visitedUrls.add(absoluteUrl);  // Mark as visited
+          links.add(absoluteUrl);  
+          visitedUrls.add(absoluteUrl);  
         }
       }
     });
 
-    return Array.from(links);  // Return the unique links
+    return Array.from(links); 
   } catch (error) {
     console.error(`Error crawling ${baseUrl}: ${error.message}`);
-    return [];  // Return empty array if crawling fails
+    return [];  
   }
 };
 
-// Function to upload data to S3 and store URL in the database
 const uploadDataToS3 = async (data, userId) => {
   const jsonData = JSON.stringify(data, null, 2);
   const buffer = Buffer.from(jsonData, 'utf8');
@@ -94,7 +85,7 @@ const uploadDataToS3 = async (data, userId) => {
 
   const params = {
     Bucket: BUCKET_NAME,
-    Key: fileName,  // S3 key (file name)
+    Key: fileName,  
     Body: buffer,
     ContentType: 'application/json',
   };
@@ -103,15 +94,13 @@ const uploadDataToS3 = async (data, userId) => {
     const s3Upload = await s3.upload(params).promise();
     console.log('File uploaded successfully to S3:', s3Upload.Location);
 
-    // After uploading, store the S3 URL in the database with userId
-    const s3Url = s3Upload.Location;  // The S3 URL of the uploaded file
+    const s3Url = s3Upload.Location;  
     const scrapedData = new ScrapedData({
-      userid: userId,  // Store userId here
+      userid: userId,  
       s3Url: s3Url,
-      uuid: uuidv4(),  // Generate a unique UUID for each record
+      uuid: uuidv4(), 
     });
 
-    // Save the data in the database (assuming you are using Mongoose)
     await scrapedData.save();
 
     return s3Url;
@@ -121,10 +110,9 @@ const uploadDataToS3 = async (data, userId) => {
   }
 };
 
-// Function to scrape all pages concurrently with rate limiting
 const scrapeAllPagesConcurrently = async (baseUrl, domain) => {
-  let linksToScrape = [baseUrl];  // Start with the base URL
-  visitedUrls.add(baseUrl);  // Mark the base URL as visited
+  let linksToScrape = [baseUrl];  
+  visitedUrls.add(baseUrl);  
   const allScrapedData = {
     paragraphs: new Set(),
     links: new Set(),
@@ -132,37 +120,30 @@ const scrapeAllPagesConcurrently = async (baseUrl, domain) => {
   };
 
   while (linksToScrape.length > 0) {
-    // Scrape up to MAX_CONCURRENCY pages concurrently
     const currentBatch = linksToScrape.splice(0, MAX_CONCURRENCY);
     const batchResults = await Promise.all(currentBatch.map(url => scrapeBodyContent(url, domain)));
 
-    // Filter out null results (failed requests)
     const successfulResults = batchResults.filter(result => result !== null);
 
-    // Collect data and links from the successful results
     successfulResults.forEach(result => {
       totalScrapedPages++;
       result.paragraphs.forEach(paragraph => allScrapedData.paragraphs.add(paragraph));
       result.links.forEach(link => allScrapedData.links.add(link));
       allScrapedData.urls.add(result.url);
 
-      // Add new links to scrape list
       result.links.forEach(link => {
         if (!visitedUrls.has(link) && link.startsWith(domain)) {
           visitedUrls.add(link);
-          linksToScrape.push(link);  // Only add links from the allowed domain
+          linksToScrape.push(link);  
         }
       });
     });
 
-    // Monitor progress
     console.log(`Scraped ${totalScrapedPages} pages so far.`);
 
-    // Add delay between batches to avoid overwhelming the server
-    await delay(1000);  // 1-second delay between batches
+    await delay(1000);  
   }
 
-  // Return the merged data as arrays (converting sets to arrays)
   return {
     paragraphs: Array.from(allScrapedData.paragraphs),
     links: Array.from(allScrapedData.links),
@@ -170,7 +151,6 @@ const scrapeAllPagesConcurrently = async (baseUrl, domain) => {
   };
 };
 
-// Controller function to initiate scraping and respond with results
 export const cheerioscrapeWebsiteController = async (req, res) => {
   const { url: baseUrl } = req.body;
 
@@ -179,17 +159,13 @@ export const cheerioscrapeWebsiteController = async (req, res) => {
   }
 
   try {
-    const userId = req.user.userId;  // Assuming user ID is part of authentication
-
-    // Extract the domain from the base URL provided by the user
+    const userId = req.user.userId;  
     const domain = extractDomain(baseUrl);
 
     const startTime = Date.now();
 
-    // Scrape all pages of the website
     const mergedData = await scrapeAllPagesConcurrently(baseUrl, domain);
 
-    // Now upload all scraped data to S3 after everything is scraped
     const s3Url = await uploadDataToS3(mergedData, userId);
 
     const endTime = Date.now();
@@ -198,7 +174,7 @@ export const cheerioscrapeWebsiteController = async (req, res) => {
     res.status(200).json({
       message: 'Scraping complete and data uploaded to S3.',
       timeTaken: `${timeTaken} seconds`,
-      s3Url: s3Url,  // Return the S3 URL where the data was uploaded
+      s3Url: s3Url,  
     });
 
   } catch (error) {

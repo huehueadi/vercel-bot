@@ -247,7 +247,7 @@ const s3 = new AWS.S3({
 const SESSION_EXPIRY_TIME = 24 * 60 * 60 * 1000; 
 
 const generateSessionId = () => {
-  const uniquePart = uuidv4().split('-')[0]; // Using only the first part of the UUID for brevity
+  const uniquePart = uuidv4().split('-')[0]; 
   return `session-${uniquePart}`;
 };
 
@@ -255,7 +255,6 @@ export const handleChat = async (req, res) => {
   const { message } = req.body;
   const { userid } = req.params;
 
-  // Retrieve session ID from the request headers (sent from localStorage on the frontend)
   let session_id = req.headers['session-id']; 
 
   if (!message) {
@@ -267,43 +266,36 @@ export const handleChat = async (req, res) => {
   }
 
   try {
-    // If no sessionId, create one (this only happens on the first request)
     if (!session_id) {
-      session_id = generateSessionId(); // Generate a new session ID
+      session_id = generateSessionId(); 
     }
 
-    // Fetch the scraped data record from the database
     const scrapedDataRecord = await ScrapedData.findOne({ userid });
     if (!scrapedDataRecord) {
       return res.status(404).json({ error: 'Scraped data not found for the provided UUID' });
     }
 
-    // Fetch the actual scraped data from S3
     const s3Data = await fetchDataFromS3(scrapedDataRecord.s3Url);
 
     if (!s3Data || s3Data.length === 0) {
       return res.status(400).json({ error: 'No valid scraped data found' });
     }
 
-    // Format the scraped data and user message into a prompt
     const formattedPrompt = formatScrapedDataForAI(s3Data, message);
 
-    // Generate a response using the AI service
     const botResponse = await generateResponse(formattedPrompt);
 
-    // Log the chat for future reference (save session ID with chat)
     const chatLog = new Chat({
       user_message: message,
       bot_response: botResponse,
       chatbot_id: scrapedDataRecord.userid,
-      session_id: session_id, // Store session ID in the chat log
+      session_id: session_id, 
     });
     await chatLog.save();
 
-    // Send the response back to the user
     res.json({ 
       response: botResponse,
-      session_id: session_id,  // Send the session ID back to the frontend
+      session_id: session_id,  
 
     
     });
@@ -313,7 +305,6 @@ export const handleChat = async (req, res) => {
   }
 };
 
-// Function to format the scraped data for AI
 const formatScrapedDataForAI = (scrapedData, userQuery) => {
   const formattedText = Array.isArray(scrapedData) 
     ? scrapedData.join("\n\n") 
@@ -323,7 +314,6 @@ const formatScrapedDataForAI = (scrapedData, userQuery) => {
   return `Here is website data:\n\n${formattedText}\n\nUser's question answer in short: ${userQuery}\nResponse:`;
 };
 
-// Fetch scraped data from S3
 const fetchDataFromS3 = async (s3Url) => {
   try {
     const response = await axios.get(s3Url);
