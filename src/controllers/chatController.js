@@ -320,7 +320,7 @@ const formatScrapedDataForAI = (scrapedData, userQuery) => {
     : scrapedData; 
 
 
-  return `Here is website data say sorry first if you cant find answer:\n\n${formattedText}\n\nUser's question answer in short: ${userQuery}\nResponse:`;
+  return `Here is website data:\n\n${formattedText}\n\nUser's question answer in short: ${userQuery}\nResponse:`;
 };
 
 // Fetch scraped data from S3
