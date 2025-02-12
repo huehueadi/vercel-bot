@@ -15,14 +15,17 @@ import { getRetentionData } from '../controllers/authRetentionController.js';
 import { getTotalMessagesForChatbot } from '../controllers/authTotalMessagesController.js';
 import { actionController, permissionController } from '../controllers/authActionController.js';
 import { createRole } from '../controllers/authRoleController.js';
+import { testChat } from '../controllers/testChat.js';
 
 
 const router = express.Router();
 
 router.post('/chat/:userid', handleChat);
+router.post('/testchat/:userid', testChat);
+
 // router.post('/chat', generateContentFromUserInput);
 
-// router.post('/scrape',authentication,scrapeWebsiteController);
+// router.post('/scrape',authentication(),);
 router.post('/register', registerChatbot)
 router.post('/get',loginChatbot)
 router.get('/getchats/:chatbot_id' ,handleGetChats)
@@ -47,15 +50,15 @@ router.get('/dashboard/options', authentication(), getDashboardOptions);
 
 // Admin Routes
 router.get('/admin/most-asked',authentication('admin'), adminMostAskedQuestionsController)
-router.get('/admin/users', authentication('admin'), getAllUsers);                 // Get all users
-router.get('/admin/getstats', authentication('admin'), getStats);                 // Get all users
+router.get('/admin/users', authentication('admin'), getAllUsers);                
+router.get('/admin/getstats', authentication('admin'), getStats);                
 
-router.get('/admin/users/:username',authentication('admin'), getUserById);             // Get user by ID
-router.get('/admin/chatbots',authentication('admin'), getAllChatbots);           // Get all chatbots
-router.get('/admin/chatbots/:id',authentication('admin'), getChatbotById);       // Get chatbot by ID
-router.delete('/admin/users/:id',authentication('admin'), deleteUser);           // Delete user
-router.delete('/admin/chatbots/:id',authentication('admin'), deleteChatbot);     // Delete chatbot
-router.put('/admin/users/:id',authentication('admin'), updateUser);              // Update user
-router.put('/admin/chatbots/:id',authentication('admin'), updateChatbot);        // Update chatbot
+router.get('/admin/users/:username',authentication('admin'), getUserById);             
+router.get('/admin/chatbots',authentication('admin'), getAllChatbots);           
+router.get('/admin/chatbots/:id',authentication('admin'), getChatbotById);       
+router.delete('/admin/users/:id',authentication('admin'), deleteUser);           
+router.delete('/admin/chatbots/:id',authentication('admin'), deleteChatbot);     
+router.put('/admin/users/:id',authentication('admin'), updateUser);              
+router.put('/admin/chatbots/:id',authentication('admin'), updateChatbot);        
 
 export default router;

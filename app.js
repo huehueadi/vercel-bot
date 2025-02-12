@@ -12,6 +12,7 @@ const app = express();
 
 const corsOptions = {
   origin: [
+    'https://bot-frontend-c64w.vercel.app',
     'http://127.0.0.1:5502', 
     'https://staging.d28eyjz01qa62a.amplifyapp.com',
     'http://localhost:3000',   // Allow localhost:3000

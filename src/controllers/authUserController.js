@@ -1,7 +1,7 @@
 import { chatbotLoginService, chatbotRegister } from "../services/authUserService.js";
 
 export const registerChatbot = async (req, res) => {
-  const { username, password, role } = req.body;  // Accept role input
+  const { username, password, role } = req.body;  
 
   if (!username || !password) {
     return res.status(400).json({ success: false, message: "Please provide username and password." });

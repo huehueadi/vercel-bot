@@ -30,29 +30,59 @@ const extractDomain = (url) => {
 const scrapeBodyContent = async (url, domain) => {
   try {
     console.log(`Scraping page: ${url}`);  
-    const { data } = await axios.get(url, { timeout: TIMEOUT });
-    const $ = cheerio.load(data);
+
+    // Fetch the content with the correct response type
+    const { data, headers } = await axios.get(url, {
+      timeout: TIMEOUT,
+      responseType: 'arraybuffer',  // To handle non-UTF-8 encoded content
+    });
+
+    // Check the Content-Type header to ensure we are scraping an HTML page
+    const contentType = headers['content-type'];
+    if (!contentType || !contentType.includes('text/html')) {
+      console.log(`Skipping non-HTML content: ${url}`);
+      return null;  // Skip non-HTML files (e.g., images, PDFs)
+    }
+
+    // If content is binary, skip it
+    const contentEncoding = headers['content-encoding'];
+    if (contentEncoding && contentEncoding.includes('gzip')) {
+      console.log(`Skipping gzipped content: ${url}`);
+      return null;  // Skip gzipped content, or handle separately if needed
+    }
+
+    // Convert the arraybuffer to a string (for non-UTF-8 encoded content)
+    const decodedData = Buffer.from(data, 'binary').toString('utf-8');
+
+    // Load the page with cheerio
+    const $ = cheerio.load(decodedData);
 
     const paragraphs = new Set();
     $('p').each((index, element) => {
-      paragraphs.add($(element).text().trim());  
+      const paragraphText = $(element).text().trim();
+      if (paragraphText.length > 0) {
+        paragraphs.add(paragraphText);  // Only add non-empty paragraphs
+      }
     });
 
+    // Collect links
     const links = new Set();
     $('a').each((index, element) => {
       const href = $(element).attr('href');
       if (href) {
         const absoluteUrl = new URL(href, url).href;
-        links.add(absoluteUrl);  
+        links.add(absoluteUrl);  // Add absolute links
       }
     });
 
     return { url, paragraphs: Array.from(paragraphs), links: Array.from(links) };
+
   } catch (error) {
     console.error(`Error scraping ${url}: ${error.message}`);
-    return null; 
+    return null;  // Return null in case of error (this can be handled in the calling function)
   }
 };
+
 
 const crawlWebsite = async (baseUrl, domain) => {
   try {
