@@ -28,10 +28,10 @@ app.use(cookieParser());
 // Database Connection
 connectDB()
 // Routes
-app.use('/v1', router);    // Prefix user routes with /v1/user
+app.use('/v1', router);    
 
 app.get('/',(req, res)=>{
-  res.send("health")
+  res.send("Hello World")
 });
 
 
