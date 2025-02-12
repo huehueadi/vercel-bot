@@ -15,13 +15,13 @@ import { getRetentionData } from '../controllers/authRetentionController.js';
 import { getTotalMessagesForChatbot } from '../controllers/authTotalMessagesController.js';
 import { actionController, permissionController } from '../controllers/authActionController.js';
 import { createRole } from '../controllers/authRoleController.js';
-import { testChat } from '../controllers/testChat.js';
+// import { testChat } from '../controllers/testChat.js';
 
 
 const router = express.Router();
 
 router.post('/chat/:userid', handleChat);
-router.post('/testchat/:userid', testChat);
+// router.post('/testchat/:userid', testChat);
 
 // router.post('/chat', generateContentFromUserInput);
 
