@@ -11,14 +11,10 @@ const app = express();
 // Middleware
 
 const corsOptions = {
-  origin: [
-    'https://bot-frontend-kohl.vercel.app',
-    'http://127.0.0.1:5502', 
-    'http://localhost:3000',   // Allow localhost:3000
-    'http://localhost:3001',   // Allow localhost:3001
-  ],
-  credentials: true,           // Allow credentials like cookies, authorization headers, etc.
+  origin: '*', // Allows requests from any origin
+  credentials: true, // Allow credentials like cookies, authorization headers, etc.
 };
+
 
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
