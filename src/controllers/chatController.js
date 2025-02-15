@@ -25,7 +25,7 @@ const generateSessionId = () => {
 export const handleChat = async (req, res) => {
   const { message } = req.body;
   const { userid } = req.params;
-
+  
   let session_id = req.headers['session-id']; 
 
   if (!message) {
@@ -38,7 +38,7 @@ export const handleChat = async (req, res) => {
 
   try {
     if (!session_id) {
-      session_id = generateSessionId(); 
+      session_id = generateSessionId();
     }
 
     const scrapedDataRecord = await ScrapedData.findOne({ userid });
@@ -47,15 +47,24 @@ export const handleChat = async (req, res) => {
     }
 
     const s3Data = await fetchDataFromS3(scrapedDataRecord.s3Url);
-
     if (!s3Data || s3Data.length === 0) {
       return res.status(400).json({ error: 'No valid scraped data found' });
     }
 
-    const formattedPrompt = formatScrapedDataForAI(s3Data, message);
+    const previousChats = await Chat.find({ session_id })
+      .sort({ createdAt: 1 }) // Sort in order of chat history
+      .limit(5); // Limit messages to avoid exceeding token limits
 
+    // Format previous chat messages
+    let chatHistory = previousChats.map(chat => `User: ${chat.user_message}\nBot: ${chat.bot_response}`).join("\n\n");
+
+    // Format final prompt for AI model
+    const formattedPrompt = formatScrapedDataForAI(s3Data, message, chatHistory);
+
+    // Generate response using AI
     const botResponse = await generateResponse(formattedPrompt);
 
+    // Save chat history to database
     const chatLog = new Chat({
       user_message: message,
       bot_response: botResponse,
@@ -67,23 +76,23 @@ export const handleChat = async (req, res) => {
     res.json({ 
       response: botResponse,
       session_id: session_id,  
-
-    
     });
+
   } catch (err) {
     console.error('Error handling chat:', err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-const formatScrapedDataForAI = (scrapedData, userQuery) => {
+
+const formatScrapedDataForAI = (scrapedData, userQuery, chatHistory) => {
   const formattedText = Array.isArray(scrapedData) 
     ? scrapedData.join("\n\n") 
     : scrapedData; 
 
-
-  return `Here is website data:\n\n${formattedText}\n\nUser's question answer in short: ${userQuery}\nResponse:`;
+  return `Here is website data:\n\n${formattedText}\n\nPrevious Conversation:\n${chatHistory}\n\nUser's Question: ${userQuery}\nResponse:`;
 };
+
 
 const fetchDataFromS3 = async (s3Url) => {
   try {
