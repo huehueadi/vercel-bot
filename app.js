@@ -10,13 +10,9 @@ const app = express();
 
 // Middleware
 
-const corsOptions = {
-  origin: '*', // Allows requests from any origin
-  credentials: true, // Allow credentials like cookies, authorization headers, etc.
-};
 
 
-app.use(cors(corsOptions));
+app.use(cors());
 app.use(bodyParser.json());
 app.use(cookieParser());
 
